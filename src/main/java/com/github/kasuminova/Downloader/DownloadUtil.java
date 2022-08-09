@@ -48,8 +48,8 @@ public class DownloadUtil {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) {
-                if (!(response.getCode() == 200)) {
-                    listener.onDownloadFailed("HTTP 状态码不正确:" + response.getCode());
+                if (!(response.code() == 200)) {
+                    listener.onDownloadFailed("HTTP 状态码不正确:" + response.code());
                     response.close();
                     return;
                 }
@@ -64,8 +64,8 @@ public class DownloadUtil {
                 }
                 File file = new File(dir, destFileName);
                 try {
-                    is = response.getBody().byteStream();
-                    long total = response.getBody().contentLength();
+                    is = response.body().byteStream();
+                    long total = response.body().contentLength();
                     listener.onDownloadStarted(total);
                     fos = new FileOutputStream(file);
                     long sum = 0;
