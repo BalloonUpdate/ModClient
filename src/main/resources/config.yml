@@ -52,9 +52,14 @@ server: http://127.0.0.1:8000/index.json
 # 此选项仅当程序以JavaAgent模式（非图形模式）启动时有效
 # no-throwing: true
 
-# !!! 此功能有问题，仅适用于某些特殊机型，通常情况下请不要开启！
-# 开启适用于安卓系统的文件修改时间补丁（仅适用于移动端，PC端不要开启！）
-# 此选项用来修复某些机型上文件修改时间API不生效的问题，
-# 开启后会使用单独维护一个文件修改时间列表，并存储在一个文本文件中
-# 此选项仅当程序以JavaAgent模式启动时有效
-# android-patch: android-patch.json
+# 全局http连接超时（单位毫秒）
+# http-connect-timeout: 5000
+
+# 全局http读取超时（单位毫秒）
+# http-read-timeout: 10000
+
+# 全局http写入超时（单位毫秒）
+# http-write-timeout: 5000
+
+# 下载文件时使用的线程数，小于等于0时会设置为JVM可用的核心数*2，俗称自动计算
+# download-threads: 0
