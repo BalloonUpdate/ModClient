@@ -1,8 +1,6 @@
 package com.github.balloonupdate.util
-import com.github.balloonupdate.data.FileObj
+
 import com.github.balloonupdate.exception.SecurityReasonException
-import com.github.balloonupdate.logging.LogSys
-import java.lang.ClassCastException
 import java.security.MessageDigest
 
 object Utils
@@ -11,15 +9,15 @@ object Utils
      * 统计文件数量
      */
     @JvmStatic
-    fun countFiles(directory: FileObj): Int
+    fun countFiles(directory: FileObject): Int
     {
         var count = 0
-        val files: List<FileObj>
+        val files: List<FileObject>
 
         try {
             files = directory.files
         } catch (e: NullPointerException) {
-            throw SecurityReasonException("由于安全机制或者IO错误，无法访问目录: " + directory.path)
+            throw SecurityReasonException(directory.path)
         }
 
         for (f in files)
@@ -48,19 +46,6 @@ object Utils
         return lines.joinToString(newline)
     }
 
-
-    @JvmStatic
-    fun walkFile(directory: FileObj, base: FileObj, callback: (dir: FileObj, path: String) -> Unit)
-    {
-        for (file in directory.files)
-        {
-            if (file.isFile)
-                callback(file, file.relativizedBy(base))
-            else
-                walkFile(file, base, callback)
-        }
-    }
-
     fun sha1(content: String): String = hash(content, "SHA1")
 
     fun md5(content: String): String = hash(content, "MD5")
@@ -72,6 +57,9 @@ object Utils
         return bin2str(md.digest())
     }
 
+    /**
+     * 将二进制数据转换为十六进制字符串
+     */
     private fun bin2str(binary: ByteArray): String
     {
         fun cvt (num: Byte): String
@@ -91,6 +79,29 @@ object Utils
             (number as Int).toLong()
         } catch (e: ClassCastException) {
             number as Long
+        }
+    }
+
+    /**
+     * 获取URL指向的文件名
+     */
+    fun getUrlFilename(url: String): String
+    {
+        if ("/" !in url)
+            return ""
+        return url.substring(url.lastIndexOf("/") + 1)
+    }
+
+    /**
+     * 字节转换为kb, mb, gb等单位
+     */
+    fun convertBytes(bytes: Long, b: String = "b", kb: String = "kb", mb: String = "mb", gb: String = "gb"): String
+    {
+        return when {
+            bytes < 1024 -> "${String.format("%.1f", bytes.toFloat())} $b"
+            bytes < 1024 * 1024 -> "${String.format("%.1f", (bytes / 1024f))} $kb"
+            bytes < 1024 * 1024 * 1024 -> "${String.format("%.1f", (bytes / 1024 / 1024f))} $mb"
+            else -> "${String.format("%.1f", (bytes / 1024 / 1024 / 1024f))} $gb"
         }
     }
 }
