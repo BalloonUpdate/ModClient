@@ -15,16 +15,13 @@ import com.github.balloonupdate.logging.FileHandler
 import com.github.balloonupdate.logging.LogSys
 import com.github.balloonupdate.util.*
 import com.github.balloonupdate.util.Utils.convertBytes
-import com.github.kasuminova.Downloader.SetupSwing
 import okhttp3.OkHttpClient
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import org.yaml.snakeyaml.Yaml
-import java.awt.Desktop
 import java.io.File
 import java.io.InterruptedIOException
-import java.lang.instrument.Instrumentation
 import java.nio.channels.ClosedByInterruptException
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarFile
@@ -572,34 +569,6 @@ class BalloonUpdateMain
     fun getProgramDirectory(workDir: FileObject): FileObject
     {
         return if(EnvUtil.isPackaged) EnvUtil.jarFile.parent else workDir
-    }
-
-    companion object {
-        /**
-         * 从JavaAgent启动
-         */
-        @JvmStatic
-        fun premain(agentArgs: String?, ins: Instrumentation?)
-        {
-            val useGraphicsMode = agentArgs != "windowless" && Desktop.isDesktopSupported()
-            if (useGraphicsMode)
-                SetupSwing.init()
-            BalloonUpdateMain().run(graphicsMode = useGraphicsMode, hasStandaloneProgress = false, externalConfigFile = null, enableLogFile = true)
-            LogSys.info("finished!")
-        }
-
-        /**
-         * 独立启动
-         */
-        @JvmStatic
-        fun main(args: Array<String>)
-        {
-            val useGraphicsMode = !(args.isNotEmpty() && args[0] == "windowless") && Desktop.isDesktopSupported()
-            if (useGraphicsMode)
-                SetupSwing.init()
-            BalloonUpdateMain().run(graphicsMode = useGraphicsMode, hasStandaloneProgress = true, externalConfigFile = null, enableLogFile = true)
-            LogSys.info("finished!")
-        }
     }
 
     private data class DownloadTask(
