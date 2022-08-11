@@ -15,7 +15,7 @@ public class StartUpdate implements IFMLCallHook {
     @Override
     public Void call() {
         FileObject externalConfig = new FileObject(BalloonUpdate.mcLocation + "/config/balloon-update.yml");
-        new BalloonUpdateMain().run(true, false, externalConfig);
+        new BalloonUpdateMain().run(true, false, externalConfig, false);
         LogSys.INSTANCE.info("finished!", true);
         return null;
     }
