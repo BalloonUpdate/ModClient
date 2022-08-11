@@ -31,7 +31,7 @@ public class BalloonUpdateService implements ITransformationService {
     public void initialize(IEnvironment environment) {
         mcLocation = ((Path)environment.getProperty((TypesafeMap.Key) IEnvironment.Keys.GAMEDIR.get()).get()).toString();
         FileObject externalConfig = new FileObject(mcLocation + "/config/balloon-update.yml");
-        new BalloonUpdateMain().run(true, false, externalConfig);
+        new BalloonUpdateMain().run(true, false, externalConfig, false);
         LogSys.INSTANCE.info("finished!", true);
     }
 
