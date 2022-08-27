@@ -15,7 +15,7 @@ apply plugin: 'kotlin'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = '1.0.2-Stable_4.1.10'
+version = '1.0.4-Stable_4.1.12'
 group = 'com.github.kasuminova.BalloonUpdateModClient' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'BalloonUpdateModClient-1.13.2-1.16.5'
 
@@ -151,15 +151,15 @@ dependencies {
 jar {
     manifest {
         attributes([
-            "Specification-Title": "BalloonUpdateMod-1.13+",
+            "Specification-Title": "BalloonUpdateModClient-1.13.2-1.16.5",
             "Specification-Vendor": "BalloonUpdate",
-            "Specification-Version": "1.0.2-Stable_4.1.10", // We are version 1 of ourselves
+            "Specification-Version": "1.0.4-Stable_4.1.12", // We are version 1 of ourselves
             "Implementation-Title": project.name,
             "Implementation-Version": "${version}",
             "Implementation-Vendor" :"BalloonUpdate",
             "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-            "Version" : "4.1.10_ModVer",
-            "ModVerion" : "1.0.2-Stable",
+            "Version" : "4.1.12_ModVer",
+            "ModVerion" : "1.0.4-Stable",
         ])
     }
 }
