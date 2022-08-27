@@ -302,12 +302,12 @@ class BalloonUpdateMain
                     taskRow.labelText = convertBytes(speed) + "/s   -  $currProgressInString%"
                     taskRow.progressBarLabel = "${convertBytes(received)} / ${convertBytes(total)}"
 
-                    val toatalSpeed: Long
-                    synchronized(lock) { toatalSpeed = samplers.sumOf { it.speed() } }
+                    val totalSpeed: Long
+                    synchronized(lock) { totalSpeed = samplers.sumOf { it.speed() } }
 
                     window!!.statusBarProgressValue = (totalProgress * 10).toInt()
                     window.statusBarProgressText = "$totalProgressInString%  -  ${downloadedCount}/${diff.newFiles.values.size}"
-                    window.statusBarText = convertBytes(toatalSpeed) + "/s"
+                    window.statusBarText = convertBytes(totalSpeed) + "/s"
                     window.titleText = Localization[LangNodes.window_title_downloading, "PERCENT", totalProgressInString]
                 }
 
