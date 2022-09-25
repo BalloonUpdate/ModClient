@@ -1,162 +1,35 @@
 package com.github.balloonupdate
 
 import com.github.balloonupdate.data.*
-import com.github.balloonupdate.exception.ConfigFileNotFoundException
+import com.github.balloonupdate.diff.CommonModeCalculator
+import com.github.balloonupdate.diff.DiffCalculatorBase
+import com.github.balloonupdate.diff.OnceModeCalculator
 import com.github.balloonupdate.exception.FailedToParsingException
-import com.github.balloonupdate.exception.UpdateDirNotFoundException
 import com.github.balloonupdate.gui.NewWindow
 import com.github.balloonupdate.localization.LangNodes
 import com.github.balloonupdate.localization.Localization
-import com.github.balloonupdate.logging.ConsoleHandler
-import com.github.balloonupdate.logging.FileHandler
 import com.github.balloonupdate.logging.LogSys
 import com.github.balloonupdate.util.*
-import com.github.balloonupdate.util.Utils.convertBytes
 import okhttp3.OkHttpClient
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import org.yaml.snakeyaml.Yaml
-import java.io.File
 import java.io.InterruptedIOException
-import java.nio.channels.ClosedByInterruptException
 import java.util.concurrent.TimeUnit
-import java.util.jar.JarFile
 import javax.swing.JOptionPane
 
-class BalloonUpdateMain
-{
-    /**
-     * 更新助手主逻辑
-     * @param graphicsMode 是否以图形模式启动（桌面环境通常以图形模式启动，安卓环境通常不以图形模式启动）
-     * @param hasStandaloneProgress 程序是否拥有独立的进程。从JavaAgent参数启动没有独立进程，双击启动有独立进程（java -jar xx.jar也属于独立启动）
-     * @param externalConfigFile 可选的外部配置文件路径，如果为空则使用 progDir/config.yml
-     * @param enableLogFile 是否写入日志文件
-     *
-     */
-    fun run(graphicsMode: Boolean, hasStandaloneProgress: Boolean, externalConfigFile: FileObject?, enableLogFile: Boolean)
-    {
-        try {
-            val workDir = getWorkDirectory()
-            val progDir = getProgramDirectory(workDir)
-            val options = GlobalOptions.CreateFromMap(readConfig(externalConfigFile ?: (progDir + "config.yml")))
-            val updateDir = getUpdateDirectory(workDir, options)
-
-            // 初始化日志系统
-            if (enableLogFile)
-                LogSys.addHandler(FileHandler(LogSys, progDir + (if (graphicsMode) "balloon_update.log" else "balloon_update.txt")))
-            LogSys.addHandler(ConsoleHandler(LogSys, if (EnvUtil.isPackaged) (if (graphicsMode) LogSys.LogLevel.DEBUG else LogSys.LogLevel.INFO) else LogSys.LogLevel.INFO))
-            if (!hasStandaloneProgress)
-                LogSys.openRangedTag("BalloonUpdate")
-
-            LogSys.info("GraphicsMode:         $graphicsMode")
-            LogSys.info("Standalone:           $hasStandaloneProgress")
-
-            Localization.init(readLangs())
-
-            // 初始化UI
-            val window = if (graphicsMode) NewWindow() else null
-//            val window: MainWin? = null
-
-            // 将更新任务单独分进一个线程执行，方便随时打断线程
-            var ex: Throwable? = null
-            val task = WorkThread(window, options, workDir, updateDir)
-            task.isDaemon = true
-            task.setUncaughtExceptionHandler { _, e -> ex = e }
-
-            if (!options.quietMode)
-                window?.show()
-
-            window?.titleTextSuffix = Localization[LangNodes.window_title_suffix, "APP_VERSION", EnvUtil.version]
-            window?.titleText = Localization[LangNodes.window_title]
-            window?.statusBarText = Localization[LangNodes.connecting_message]
-            window?.onWindowClosing?.once { win ->
-                win.hide()
-                if (task.isAlive)
-                    task.interrupt()
-            }
-
-            task.start()
-            task.join()
-
-            window?.destroy()
-
-            // 处理工作线程里的异常
-            if (ex != null)
-            {
-                if (//            ex !is SecurityException &&
-                    ex !is InterruptedException &&
-                    ex !is InterruptedIOException &&
-                    ex !is ClosedByInterruptException)
-                {
-                    try {
-                        LogSys.error(ex!!.javaClass.name)
-                        LogSys.error(ex!!.stackTraceToString())
-                    } catch (e: Exception) {
-                        println("------------------------")
-                        println(e.javaClass.name)
-                        println(e.stackTraceToString())
-                    }
-
-                    if (graphicsMode)
-                    {
-                        val errMessage = Utils.stringBreak(ex!!.message ?: "<No Exception Message>", 80)
-                        val title = "Error occurred ${EnvUtil.version}"
-                        var content = errMessage + "\n"
-                        content += if (!hasStandaloneProgress) "点击\"是\"显示错误详情并崩溃Minecraft，" else "点击\"是\"显示错误详情并退出，"
-                        content += if (!hasStandaloneProgress) "点击\"否\"继续启动Minecraft" else "点击\"否\"直接退出程序"
-                        val choice = DialogUtil.confirm(title, content)
-                        if (!hasStandaloneProgress)
-                        {
-                            if (choice)
-                            {
-                                DialogUtil.error("Callstack", ex!!.stackTraceToString())
-                                throw ex!!
-                            }
-                        } else {
-                            if (choice)
-                                DialogUtil.error("Callstack", ex!!.stackTraceToString())
-                            throw ex!!
-                        }
-                    } else {
-                        if (options.noThrowing)
-                            println("文件更新失败！但因为设置了no-throwing参数，游戏仍会继续运行！\n\n\n")
-                        else
-                            throw ex!!
-                    }
-                } else {
-                    LogSys.info("updating thread interrupted by user")
-                }
-            }
-        } catch (e: UpdateDirNotFoundException) {
-            if (graphicsMode)
-                DialogUtil.error("", e.message ?: "<No Exception Message>")
-        } catch (e: ConfigFileNotFoundException) {
-            if (graphicsMode)
-                DialogUtil.error("", e.message ?: "<No Exception Message>")
-        } catch (e: FailedToParsingException) {
-            if (graphicsMode)
-                DialogUtil.error("", e.message ?: "<No Exception Message>")
-        }
-    }
-
+class WorkThread(
+    val window: NewWindow?,
+    val options: GlobalOptions,
+    val workDir: FileObject,
+    val updateDir: FileObject
+): Thread() {
     /**
      * 更新助手工作线程
      */
-    fun task(window: NewWindow?, options: GlobalOptions, workDir: FileObject, updateDir: FileObject)
+    override fun run()
     {
-        val jvmVersion = System.getProperty("java.version")
-        val jvmVender = System.getProperty("java.vendor")
-        val osName = System.getProperty("os.name")
-        val osArch = System.getProperty("os.arch")
-        val osVersion = System.getProperty("os.version")
-
-        LogSys.info("updating directory:   ${updateDir.path}")
-        LogSys.info("working directory:    ${workDir.path}")
-        LogSys.info("executable directory: ${if(EnvUtil.isPackaged) EnvUtil.jarFile.parent.path else "dev-mode"}")
-        LogSys.info("application version:  ${EnvUtil.version} (${EnvUtil.gitCommit})")
-        LogSys.info("java virtual machine: $jvmVender $jvmVersion")
-        LogSys.info("operating system: $osName $osVersion $osArch")
+        collectEnvInfo()
 
         if (!options.quietMode)
             window?.show()
@@ -167,7 +40,7 @@ class BalloonUpdateMain
             .writeTimeout(5, TimeUnit.SECONDS).build()
 
         // 从服务器获取元信息
-        val metaResponse = requestIndex(okClient, options.server, options.noCache) // 错误处理
+        val metaResponse = requestIndex(okClient, options.server, options.noCache)
 
         // 更新UI
         window?.statusBarText = Localization[LangNodes.fetch_metadata]
@@ -306,15 +179,15 @@ class BalloonUpdateMain
 
                     taskRow.borderText = file.name
                     taskRow.progressBarValue = (currentProgress * 10).toInt()
-                    taskRow.labelText = convertBytes(speed) + "/s   -  $currProgressInString%"
-                    taskRow.progressBarLabel = "${convertBytes(received)} / ${convertBytes(total)}"
+                    taskRow.labelText = Utils.convertBytes(speed) + "/s   -  $currProgressInString%"
+                    taskRow.progressBarLabel = "${Utils.convertBytes(received)} / ${Utils.convertBytes(total)}"
 
-                    val totalSpeed: Long
-                    synchronized(lock) { totalSpeed = samplers.sumOf { it.speed() } }
+                    val toatalSpeed: Long
+                    synchronized(lock) { toatalSpeed = samplers.sumOf { it.speed() } }
 
                     window!!.statusBarProgressValue = (totalProgress * 10).toInt()
                     window.statusBarProgressText = "$totalProgressInString%  -  ${downloadedCount}/${diff.newFiles.values.size}"
-                    window.statusBarText = convertBytes(totalSpeed) + "/s"
+                    window.statusBarText = Utils.convertBytes(toatalSpeed) + "/s"
                     window.titleText = Localization[LangNodes.window_title_downloading, "PERCENT", totalProgressInString]
                 }
 
@@ -400,6 +273,25 @@ class BalloonUpdateMain
     }
 
     /**
+     * 收集并打印环境信息
+     */
+    fun collectEnvInfo()
+    {
+        val jvmVersion = System.getProperty("java.version")
+        val jvmVender = System.getProperty("java.vendor")
+        val osName = System.getProperty("os.name")
+        val osArch = System.getProperty("os.arch")
+        val osVersion = System.getProperty("os.version")
+
+        LogSys.info("updating directory:   ${updateDir.path}")
+        LogSys.info("working directory:    ${workDir.path}")
+        LogSys.info("executable directory: ${if(EnvUtil.isPackaged) EnvUtil.jarFile.parent.path else "dev-mode"}")
+        LogSys.info("application version:  ${EnvUtil.version} (${EnvUtil.gitCommit})")
+        LogSys.info("java virtual machine: $jvmVender $jvmVersion")
+        LogSys.info("operating system: $osName $osVersion $osArch")
+    }
+
+    /**
      * 将服务器返回的文件结构信息反序列化成SimpleFileObject对象便于使用
      */
     fun unserializeFileStructure(raw: JSONArray): List<SimpleFileObject>
@@ -478,127 +370,4 @@ class BalloonUpdateMain
             hashAlgorithm = hashAlgorithm,
         )
     }
-
-    /**
-     * 向上搜索，直到有一个父目录包含.minecraft目录，然后返回这个父目录。最大搜索7层目录
-     * @param basedir 从哪个目录开始向上搜索
-     * @return 包含.minecraft目录的父目录。如果找不到则返回Null
-     */
-    fun searchDotMinecraft(basedir: FileObject): FileObject?
-    {
-        try {
-            if(basedir.contains(".minecraft"))
-                return basedir
-            if(basedir.parent.contains(".minecraft"))
-                return basedir.parent
-            if(basedir.parent.parent.contains(".minecraft"))
-                return basedir.parent.parent
-            if(basedir.parent.parent.parent.contains(".minecraft"))
-                return basedir.parent.parent.parent
-            if(basedir.parent.parent.parent.parent.contains(".minecraft"))
-                return basedir.parent.parent.parent.parent
-            if(basedir.parent.parent.parent.parent.parent.contains(".minecraft"))
-                return basedir.parent.parent.parent.parent.parent
-            if(basedir.parent.parent.parent.parent.parent.parent.contains(".minecraft"))
-                return basedir.parent.parent.parent.parent.parent.parent
-        } catch (e: NullPointerException) {
-            return null
-        }
-        return null
-    }
-
-    /**
-     * 从外部/内部读取配置文件并将内容返回（当外部不可用时会从内部读取）
-     * @param externalConfigFile 外部配置文件
-     * @return 解码后的配置文件对象
-     * @throws ConfigFileNotFoundException 配置文件找不到时
-     * @throws FailedToParsingException 配置文件无法解码时
-     */
-    fun readConfig(externalConfigFile: FileObject): Map<String, Any>
-    {
-        try {
-            val content: String
-            if(!externalConfigFile.exists)
-            {
-                if(!EnvUtil.isPackaged)
-                    throw ConfigFileNotFoundException("config.yml")
-                JarFile(EnvUtil.jarFile.path).use { jar ->
-                    val configFileInZip = jar.getJarEntry("config.yml") ?: throw ConfigFileNotFoundException("config.yml")
-                    jar.getInputStream(configFileInZip).use { content = it.readBytes().decodeToString() }
-                }
-            } else {
-                content = externalConfigFile.content
-            }
-            return Yaml().load(content)
-        } catch (e: JSONException) {
-            throw FailedToParsingException("配置文件config.yml", "yaml", e.message ?: "")
-        }
-    }
-
-    /**
-     * 从Jar文件内读取语言配置文件（仅图形模式启动时有效）
-     * @return 语言配置文件对象
-     * @throws ConfigFileNotFoundException 配置文件找不到时
-     * @throws FailedToParsingException 配置文件无法解码时
-     */
-    fun readLangs(): Map<String, String>
-    {
-        try {
-            val content: String
-            if (EnvUtil.isPackaged)
-                JarFile(EnvUtil.jarFile.path).use { jar ->
-                    val langFileInZip = jar.getJarEntry("lang.yml") ?: throw ConfigFileNotFoundException("lang.yml")
-                    jar.getInputStream(langFileInZip).use { content = it.readBytes().decodeToString() }
-                }
-            else
-                content = (FileObject(System.getProperty("user.dir")) + "src/main/resources/lang.yml").content
-
-            return Yaml().load(content)
-        } catch (e: JSONException) {
-            throw FailedToParsingException("语言配置文件lang.yml", "yaml", e.message ?: "")
-        }
-    }
-
-    /**
-     * 获取进程的工作目录
-     */
-    fun getWorkDirectory(): FileObject
-    {
-        return System.getProperty("user.dir").run {
-            if(EnvUtil.isPackaged)
-                FileObject(this)
-            else
-                FileObject("$this${File.separator}debug-directory").also { it.mkdirs() }
-        }
-    }
-
-    /**
-     * 获取需要更新的起始目录
-     * @throws UpdateDirNotFoundException 当.minecraft目录搜索不到时
-     */
-    fun getUpdateDirectory(workDir: FileObject, options: GlobalOptions): FileObject
-    {
-        return if(EnvUtil.isPackaged) {
-            if (options.basePath != "") EnvUtil.jarFile.parent + options.basePath
-            else searchDotMinecraft(workDir) ?: throw UpdateDirNotFoundException()
-        } else {
-            workDir // 调试状态下永远使用project/workdir作为更新目录
-        }.apply { mkdirs() }
-    }
-
-    /**
-     * 获取Jar文件所在的目录
-     */
-    fun getProgramDirectory(workDir: FileObject): FileObject
-    {
-        return if(EnvUtil.isPackaged) EnvUtil.jarFile.parent else workDir
-    }
-
-    private data class DownloadTask(
-        val lengthExpected: Long,
-        val modified: Long,
-        val url: String,
-        val file: FileObject,
-        val noCache: String?,
-    )
 }
