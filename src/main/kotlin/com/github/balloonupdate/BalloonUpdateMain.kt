@@ -34,7 +34,7 @@ class BalloonUpdateMain
      * @param enableLogFile 是否写入日志文件
      *
      */
-    fun run(graphicsMode: Boolean, hasStandaloneProgress: Boolean, externalConfigFile: FileObject?, enableLogFile: Boolean)
+    fun run(graphicsMode: Boolean, hasStandaloneProgress: Boolean, externalConfigFile: File2?, enableLogFile: Boolean)
     {
         try {
             val workDir = getWorkDirectory()
@@ -145,7 +145,7 @@ class BalloonUpdateMain
      * @param basedir 从哪个目录开始向上搜索
      * @return 包含.minecraft目录的父目录。如果找不到则返回Null
      */
-    fun searchDotMinecraft(basedir: FileObject): FileObject?
+    fun searchDotMinecraft(basedir: File2): File2?
     {
         try {
             if(basedir.contains(".minecraft"))
@@ -175,7 +175,7 @@ class BalloonUpdateMain
      * @throws ConfigFileNotFoundException 配置文件找不到时
      * @throws FailedToParsingException 配置文件无法解码时
      */
-    fun readConfig(externalConfigFile: FileObject): Map<String, Any>
+    fun readConfig(externalConfigFile: File2): Map<String, Any>
     {
         try {
             val content: String
@@ -212,7 +212,7 @@ class BalloonUpdateMain
                     jar.getInputStream(langFileInZip).use { content = it.readBytes().decodeToString() }
                 }
             else
-                content = (FileObject(System.getProperty("user.dir")) + "src/main/resources/lang.yml").content
+                content = (File2(System.getProperty("user.dir")) + "src/main/resources/lang.yml").content
 
             return Yaml().load(content)
         } catch (e: JSONException) {
@@ -223,13 +223,13 @@ class BalloonUpdateMain
     /**
      * 获取进程的工作目录
      */
-    fun getWorkDirectory(): FileObject
+    fun getWorkDirectory(): File2
     {
         return System.getProperty("user.dir").run {
             if(EnvUtil.isPackaged)
-                FileObject(this)
+                File2(this)
             else
-                FileObject("$this${File.separator}debug-directory").also { it.mkdirs() }
+                File2("$this${File.separator}debug-directory").also { it.mkdirs() }
         }
     }
 
@@ -237,7 +237,7 @@ class BalloonUpdateMain
      * 获取需要更新的起始目录
      * @throws UpdateDirNotFoundException 当.minecraft目录搜索不到时
      */
-    fun getUpdateDirectory(workDir: FileObject, options: GlobalOptions): FileObject
+    fun getUpdateDirectory(workDir: File2, options: GlobalOptions): File2
     {
         return if(EnvUtil.isPackaged) {
             if (options.basePath != "") EnvUtil.jarFile.parent + options.basePath
@@ -250,7 +250,7 @@ class BalloonUpdateMain
     /**
      * 获取Jar文件所在的目录
      */
-    fun getProgramDirectory(workDir: FileObject): FileObject
+    fun getProgramDirectory(workDir: File2): File2
     {
         return if(EnvUtil.isPackaged) EnvUtil.jarFile.parent else workDir
     }
