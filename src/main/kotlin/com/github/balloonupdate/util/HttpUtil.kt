@@ -45,6 +45,7 @@ object HttpUtil
         writeTo: File2,
         lengthExpected: Long,
         noCache: String?,
+        retryTimes: Int,
         onProgress: (packageLength: Long, bytesReceived: Long, totalReceived: Long) -> Unit,
         onSourceFallback: () -> Unit,
     ) {
@@ -53,7 +54,7 @@ object HttpUtil
         for (url in urls)
         {
             ex = try {
-                return httpDownload(client, url, writeTo, lengthExpected, noCache, onProgress)
+                return httpDownload(client, url, writeTo, lengthExpected, noCache, retryTimes, onProgress)
             } catch (e: ConnectionRejectedException) { e }
             catch (e: ConnectionInterruptedException) { e }
             catch (e: ConnectionTimeoutException) { e }
@@ -119,6 +120,7 @@ object HttpUtil
         writeTo: File2,
         lengthExpected: Long,
         noCache: String?,
+        retryTimes: Int,
         onProgress: (packageLength: Long, bytesReceived: Long, totalReceived: Long) -> Unit
     ) {
         var link = url.replace("+", "%2B")
@@ -150,27 +152,25 @@ object HttpUtil
         }
 
         var ex: Throwable? = null
-        var retries = 5
+        var retries = retryTimes
         while (--retries >= 0)
         {
             try {
                 client.newCall(req).execute().use { r ->
-                    if(r.isSuccessful)
-                    {
-                        r.body!!.byteStream().use { input ->
-                            FileOutputStream(writeTo.path).use { output ->
-                                var bytesReceived: Long = 0
-                                var len: Int
-                                val buffer = ByteArray(bufferLen(lengthExpected))
-                                while (input.read(buffer).also { len = it; bytesReceived += it } != -1)
-                                {
-                                    output.write(buffer, 0, len)
-                                    onProgress(len.toLong(), bytesReceived, lengthExpected)
-                                }
+                    if(!r.isSuccessful)
+                        throw HttpResponseStatusCodeException(r.code, link, r.body?.string())
+
+                    r.body!!.byteStream().use { input ->
+                        FileOutputStream(writeTo.path).use { output ->
+                            var bytesReceived: Long = 0
+                            var len: Int
+                            val buffer = ByteArray(bufferLen(lengthExpected))
+                            while (input.read(buffer).also { len = it; bytesReceived += it } != -1)
+                            {
+                                output.write(buffer, 0, len)
+                                onProgress(len.toLong(), bytesReceived, lengthExpected)
                             }
                         }
-                    } else {
-                        throw HttpResponseStatusCodeException(r.code, link, r.body?.string())
                     }
                 }
                 ex = null
@@ -180,8 +180,12 @@ object HttpUtil
             } catch (e: SocketException) {
                 ex = ConnectionRejectedException(link, e.message ?: "")
             } catch (e: SocketTimeoutException) {
-                throw ConnectionTimeoutException(link, e.message ?: "")
+                ex = ConnectionTimeoutException(link, e.message ?: "")
             }
+
+            LogSys.warn("")
+            LogSys.warn(ex.toString())
+            LogSys.warn("retrying $retries ...")
 
             Thread.sleep(1000)
         }
