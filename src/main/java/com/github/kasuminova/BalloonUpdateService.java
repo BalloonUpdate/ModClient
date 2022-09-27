@@ -2,7 +2,7 @@ package com.github.kasuminova;
 
 import com.github.balloonupdate.BalloonUpdateMain;
 import com.github.balloonupdate.logging.LogSys;
-import com.github.balloonupdate.util.FileObject;
+import com.github.balloonupdate.util.File2;
 import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
@@ -30,7 +30,7 @@ public class BalloonUpdateService implements ITransformationService {
 
     public void initialize(IEnvironment environment) {
         mcLocation = ((Path)environment.getProperty((TypesafeMap.Key) IEnvironment.Keys.GAMEDIR.get()).get()).toString();
-        FileObject externalConfig = new FileObject(mcLocation + "/config/balloon-update.yml");
+        File2 externalConfig = new File2(mcLocation + "/config/balloon-update.yml");
         new BalloonUpdateMain().run(true, false, externalConfig, false);
         LogSys.INSTANCE.info("finished!", true);
     }

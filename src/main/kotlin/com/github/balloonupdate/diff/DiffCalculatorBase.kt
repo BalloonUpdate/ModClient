@@ -1,13 +1,15 @@
 package com.github.balloonupdate.diff
 
-import com.github.balloonupdate.util.FileObject
+import com.github.balloonupdate.data.HashAlgorithm
+import com.github.balloonupdate.util.File2
 import com.github.balloonupdate.data.SimpleDirectory
 import com.github.balloonupdate.data.SimpleFile
 import com.github.balloonupdate.data.SimpleFileObject
+import com.github.kasuminova.Utils.HashCalculator
 import com.hrakaroo.glob.GlobPattern
 import java.lang.RuntimeException
 
-typealias OnScanCallback = (file: FileObject) -> Unit
+typealias OnScanCallback = (file: File2) -> Unit
 
 /**
  * 文件差异计算器的基本类
@@ -17,16 +19,21 @@ typealias OnScanCallback = (file: FileObject) -> Unit
  *
  * @param local 要比较的本地文件
  * @param remote 要比较的远程文件
+ * @param opt 可调节的参数
  */
-abstract class DiffCalculatorBase(val local: FileObject, val remote: List<SimpleFileObject>, var opt: Options)
-{
+abstract class DiffCalculatorBase(
+    val local: File2,
+    val remote: List<SimpleFileObject>,
+    var opt: Options,
+) {
     val base = local
     val result: Difference = Difference()
+
 
     /**
      * 将一个文件文件或者目录标记为旧文件
      */
-    protected fun markAsOld(file: FileObject)
+    protected fun markAsOld(file: File2)
     {
         if(file.isDirectory)
         {
@@ -46,7 +53,7 @@ abstract class DiffCalculatorBase(val local: FileObject, val remote: List<Simple
     /**
      * 将一个文件文件或者目录标记为新文件
      */
-    protected fun markAsNew(node: SimpleFileObject, dir: FileObject)
+    protected fun markAsNew(node: SimpleFileObject, dir: File2)
     {
         if(node is SimpleDirectory)
         {
@@ -85,6 +92,18 @@ abstract class DiffCalculatorBase(val local: FileObject, val remote: List<Simple
             }
         }
         return result
+    }
+
+    /**
+     * 计算文件的哈希值
+     */
+    protected fun calculateHash(file: File2): String
+    {
+        return when (opt.hashAlgorithm) {
+            HashAlgorithm.CRC32 -> file.crc32
+            HashAlgorithm.MD5 -> HashCalculator.getMD5(file.file)
+            HashAlgorithm.SHA1 -> HashCalculator.getSHA1(file.file)
+        }
     }
 
     /**
@@ -130,5 +149,11 @@ abstract class DiffCalculatorBase(val local: FileObject, val remote: List<Simple
          * 是否检测文件修改时间，而不是每次都完整检查文件校验，此选项可以节省时间
          */
         val checkModified: Boolean,
+
+
+        /**
+         * 使用的哈希算法
+         */
+        val hashAlgorithm: HashAlgorithm
     )
 }
