@@ -6,7 +6,7 @@ plugins {
 
 
 group = 'github'
-version = '1.0.4-Stable_4.1.12'
+version = '1.0.5-Stable_4.1.15'
 
 java {
     archivesBaseName = '!BalloonUpdateModClient-1.12.2'
@@ -95,7 +95,7 @@ dependencies {
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
     minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2860'
     implementation ("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation ("org.yaml:snakeyaml:1.30")
+    implementation ('org.yaml:snakeyaml:1.32')
     implementation ("com.squareup.okhttp3:okhttp:4.10.0")
     implementation ("org.json:json:20220320")
     implementation ("com.hrakaroo:glob:0.9.0")
@@ -119,8 +119,8 @@ dependencies {
 jar {
     manifest {
         attributes([
-                "Version" : "4.1.12_ModVer",
-                "ModVerion" : "1.0.4-Stable",
+                "Version" : "4.1.15_ModVer",
+                "ModVerion" : "1.0.5-Stable",
                 "FMLCorePlugin" : "com.github.kasuminova.BalloonUpdate",
                 "FMLCorePluginContainsFMLMod" : false
         ])
