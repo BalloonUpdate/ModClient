@@ -11,6 +11,7 @@ import com.github.balloonupdate.logging.ConsoleHandler
 import com.github.balloonupdate.logging.FileHandler
 import com.github.balloonupdate.logging.LogSys
 import com.github.balloonupdate.util.*
+import com.github.kasuminova.GUI.SetupSwing
 import com.github.kasuminova.Utils.HashCalculator
 import org.json.JSONException
 import org.yaml.snakeyaml.Yaml
@@ -52,11 +53,11 @@ class BalloonUpdateMain
             Localization.init(readLangs())
 
             // 应用主题
-//            if (graphicsMode && !options.disableTheme)
-//                SetupSwing.init()
+            if (graphicsMode && !options.disableTheme)
+                SetupSwing.init()
 
             // 初始化UI
-            val window = if (graphicsMode) NewWindow() else null
+            val window = if (graphicsMode) NewWindow(options.windowWidth, options.windowHeight) else null
 //            val window: MainWin? = null
 
             // 将更新任务单独分进一个线程执行，方便随时打断线程
