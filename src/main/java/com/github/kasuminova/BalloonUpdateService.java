@@ -17,7 +17,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 public class BalloonUpdateService implements ITransformationService {
-    public static final Logger LOGGER = LogManager.getLogger("BalloonUpdaterService");
+    public static final Logger LOGGER = LogManager.getLogger("BalloonUpdateMod");
     public static String mcLocation;
 
     public BalloonUpdateService() {
