@@ -6,7 +6,7 @@ plugins {
 
 
 group = 'github'
-version = '1.0.5-Stable_4.1.15'
+version = '1.0.6-Stable_4.1.17'
 
 java {
     archivesBaseName = '!BalloonUpdateModClient-1.12.2'
@@ -119,8 +119,8 @@ dependencies {
 jar {
     manifest {
         attributes([
-                "Version" : "4.1.15_ModVer",
-                "ModVerion" : "1.0.5-Stable",
+                "Version" : "4.1.17_ModVer",
+                "ModVerion" : "1.0.6-Stable",
                 "FMLCorePlugin" : "com.github.kasuminova.BalloonUpdate",
                 "FMLCorePluginContainsFMLMod" : false
         ])

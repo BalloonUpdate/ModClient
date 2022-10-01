@@ -11,7 +11,7 @@ import java.util.Map;
 @IFMLLoadingPlugin.TransformerExclusions("github.kasuminova")
 public class BalloonUpdate implements IFMLLoadingPlugin {
     public static String mcLocation = null;
-    static Logger logger = LogManager.getLogger("AutoUpdaterMod");
+    static Logger logger = LogManager.getLogger("BalloonUpdateMod");
     @Override
     public String[] getASMTransformerClass() {
         return new String[0];
