@@ -14,7 +14,7 @@ apply plugin: 'maven-publish'
 
 version = '1.1.0-Stable'
 group = 'com.github.kasuminova.BalloonUpdateService' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = 'BalloonUpdateModClient-1.13.2-1.16.5'
+archivesBaseName = 'BalloonUpdateModLoader-1.13.2-1.16.5'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(8) // Mojang ships Java 8 to end users, so your mod should target Java 8.
 
@@ -145,7 +145,7 @@ dependencies {
 jar {
     manifest {
         attributes([
-            "Specification-Title": "BalloonUpdateModClient-1.13.2-1.16.5",
+            "Specification-Title": "BalloonUpdateModLoader-1.13.2-1.16.5",
             "Specification-Vendor": "BalloonUpdate",
             "Specification-Version": "1.1.0-Stable", // We are version 1 of ourselves
             "Implementation-Title": project.name,
