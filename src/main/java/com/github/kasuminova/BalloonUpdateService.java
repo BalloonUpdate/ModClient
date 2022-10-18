@@ -4,11 +4,11 @@ import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
 
-import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -19,6 +19,8 @@ import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import javax.swing.*;
 
 public class BalloonUpdateService implements ITransformationService {
     // static 代码块, 超前调用外部 JAR 包
@@ -96,7 +98,6 @@ public class BalloonUpdateService implements ITransformationService {
             //开始载入外部 Jar
             URLClassLoader urlClassLoader = null;
             Class<?> BalloonUpdateMain;
-            Class<?> SetupSwing;
             try {
                 logger.info("Loading JAR: " + path);
                 //通过URLClassLoader加载外部jar
@@ -107,20 +108,38 @@ public class BalloonUpdateService implements ITransformationService {
 
                 BalloonUpdateMain = urlClassLoader.loadClass("com.github.balloonupdate.BalloonUpdateMain");
 
-                Method main = BalloonUpdateMain.getMethod("main", String[].class);
+                Method modLoaderOrMain;
+                try {
+                    modLoaderOrMain = BalloonUpdateMain.getMethod("modloader", boolean.class, boolean.class);
 
-                logger.info("Method Load Successfully, invoke Method main()...");
+                    logger.info("Method Load Successfully, invoke Method modloader()...");
 
-                main.invoke(null, (Object) new String[0]);
+                    boolean result = (boolean) modLoaderOrMain.invoke(null, false, false);
+
+                    if (result) {
+                        JOptionPane.showMessageDialog(null,
+                                "检测到有模组文件变化, 请重启游戏.\n点击确认后退出程序.", "已更新文件", JOptionPane.INFORMATION_MESSAGE);
+                        System.exit(0);
+                    }
+                } catch (NoSuchMethodException ex) {
+                    logger.warn("Could Not Find Method modloader(), Using main().");
+                    modLoaderOrMain = BalloonUpdateMain.getMethod("main", String[].class);
+
+                    logger.info("Method Load Successfully, invoke Method main()...");
+
+                    modLoaderOrMain.invoke(null, (Object) new String[]{});
+                }
+            } catch (InvocationTargetException ex) {
+                throw new RuntimeException(ex);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
                 //卸载关闭外部 JAR
                 try {
                     if (urlClassLoader != null) urlClassLoader.close();
-                    System.out.println("Finished!");
+                    logger.info("Finished!");
                 } catch (IOException e) {
-                    System.out.println("Close JAR Failed：" + e.getMessage());
+                    logger.info("Close JAR Failed：" + e.getMessage());
                 }
             }
         }
