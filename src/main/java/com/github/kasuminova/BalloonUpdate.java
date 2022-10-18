@@ -4,8 +4,10 @@ import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.*;
 import java.awt.*;
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -17,7 +19,7 @@ import java.util.Map;
 @IFMLLoadingPlugin.Name("BalloonUpdatePlugin")
 @IFMLLoadingPlugin.TransformerExclusions("github.kasuminova")
 public class BalloonUpdate implements IFMLLoadingPlugin {
-    // static 代码块, 超前调用外部 JAR 包
+    //static 代码块, 超前调用外部 JAR 包
     static {
         Logger logger = LogManager.getLogger("BalloonUpdateModLoader");
         File directory = new File(".");
@@ -106,23 +108,43 @@ public class BalloonUpdate implements IFMLLoadingPlugin {
                 if (Desktop.isDesktopSupported()) {
                     SetupSwing = urlClassLoader.loadClass("com.github.kasuminova.GUI.SetupSwing");
                     Method init = SetupSwing.getMethod("init");
+
+                    logger.info("Loading Swing Theme...");
                     init.invoke(null);
                 }
 
-                Method main = BalloonUpdateMain.getMethod("main", String[].class);
+                Method modLoaderOrMain;
+                try {
+                    modLoaderOrMain = BalloonUpdateMain.getMethod("modloader", boolean.class, boolean.class);
 
-                logger.info("Method Load Successfully, invoke Method main()...");
+                    logger.info("Method Load Successfully, invoke Method modloader()...");
 
-                main.invoke(null, (Object) new String[0]);
+                    boolean result = (boolean) modLoaderOrMain.invoke(null, false, false);
+
+                    if (result) {
+                        JOptionPane.showMessageDialog(null,
+                                "检测到有模组文件变化, 请重启游戏.\n点击确认后退出程序.", "已更新文件", JOptionPane.INFORMATION_MESSAGE);
+                        System.exit(0);
+                    }
+                } catch (NoSuchMethodException ex) {
+                    logger.warn("Could Not Find Method modloader(), Using main().");
+                    modLoaderOrMain = BalloonUpdateMain.getMethod("main", String[].class);
+
+                    logger.info("Method Load Successfully, invoke Method main()...");
+
+                    modLoaderOrMain.invoke(null, (Object) new String[]{});
+                }
+            } catch (InvocationTargetException ex) {
+                throw new RuntimeException(ex);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
                 //卸载关闭外部 JAR
                 try {
                     if (urlClassLoader != null) urlClassLoader.close();
-                    System.out.println("Finished!");
+                    logger.info("Finished!");
                 } catch (IOException e) {
-                    System.out.println("Close JAR Failed：" + e.getMessage());
+                    logger.info("Close JAR Failed：" + e.getMessage());
                 }
             }
         }
