@@ -9,6 +9,7 @@ import java.awt.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -29,7 +30,7 @@ public class BalloonUpdate implements IFMLLoadingPlugin {
         String path = null;
 
         //根据自定义文件名 BalloonUpdateFileName 内的文件名搜索文件, 如果文件不存在则不做任何修改
-        File fileNameTXT = new File("./BalloonUpdateFileName.txt");
+        File fileNameTXT = new File("./ClientFileName.txt");
         if (fileNameTXT.exists() && fileNameTXT.isFile()) {
             try {
                 Reader reader = new InputStreamReader(Files.newInputStream(fileNameTXT.toPath()), StandardCharsets.UTF_8);
@@ -50,7 +51,7 @@ public class BalloonUpdate implements IFMLLoadingPlugin {
         }
 
         //根据自定义文件名 OldBalloonUpdateFileName 内的文件名搜索文件, 如果存在则删除指定文件
-        File oldFileNamesTXT = new File("./OldBalloonUpdateFileName.txt");
+        File oldFileNamesTXT = new File("./OldClientFileName.txt");
         if (oldFileNamesTXT.exists() && oldFileNamesTXT.isFile()) {
             try {
                 Reader reader = new InputStreamReader(Files.newInputStream(oldFileNamesTXT.toPath()), StandardCharsets.UTF_8);
@@ -123,8 +124,8 @@ public class BalloonUpdate implements IFMLLoadingPlugin {
 
                     if (result) {
                         JOptionPane.showMessageDialog(null,
-                                "检测到有模组文件变化, 请重启游戏.\n点击确认后退出程序.", "已更新文件", JOptionPane.INFORMATION_MESSAGE);
-                        System.exit(0);
+                                "检测到有文件变化, 请重启游戏.\n点击确认后退出游戏.", "已更新文件", JOptionPane.INFORMATION_MESSAGE);
+                        throw new RuntimeException("检测到有文件变化, 请重启游戏.");
                     }
                 } catch (NoSuchMethodException ex) {
                     logger.warn("Could Not Find Method modloader(), Using main().");
@@ -136,8 +137,8 @@ public class BalloonUpdate implements IFMLLoadingPlugin {
                 }
             } catch (InvocationTargetException ex) {
                 throw new RuntimeException(ex);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (IllegalAccessException | NoSuchMethodException | ClassNotFoundException | MalformedURLException ex) {
+                logger.error(ex);
             } finally {
                 //卸载关闭外部 JAR
                 try {
